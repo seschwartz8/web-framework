@@ -1,9 +1,10 @@
 import { User } from './models/User';
-import axios from 'axios';
+// import axios from 'axios';
 
-axios.post('http://localhost:3000/users/1', {
-  name: 'myname',
-  age: 20
+const user = new User({ id: 1, name: 'newer', age: 110 });
+
+user.on('save', () => {
+  console.log(user);
 });
 
-axios.get('http://localhost:3000/users/1', {});
+user.save();
