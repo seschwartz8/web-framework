@@ -29,24 +29,14 @@ export class Model<T extends HasId> {
     private sync: Sync<T>
   ) {}
 
-  get get() {
-    // Return reference to the attributes.get method so we can directly call the get method from eventing with user.get()
-    return this.attributes.get;
-  }
+  // Directly refer to the methods so we can call them directly (e.g. user.get() instead of user.attributes.get())
+  get = this.attributes.get;
+  on = this.events.on;
+  trigget = this.events.trigger;
 
   set(update: T): void {
     this.attributes.set(update);
     this.events.trigger('change');
-  }
-
-  get on() {
-    // Return reference to the events.on method so we can directly call the on method from eventing with user.on()
-    return this.events.on;
-  }
-
-  get trigger() {
-    // Return reference to the events.trigger method so we can directly call the trigger method from eventing with user.trigger()
-    return this.events.trigger;
   }
 
   fetch(): void {
