@@ -117,7 +117,103 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"src/models/Model.ts":[function(require,module,exports) {
+})({"src/views/UserForm.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var UserForm =
+/** @class */
+function () {
+  function UserForm(parent, model) {
+    var _this = this;
+
+    this.parent = parent;
+    this.model = model;
+
+    this.onSetAgeClick = function () {
+      // Handler for random age button click
+      _this.model.setRandomAge();
+    };
+
+    this.onSetNameClick = function () {
+      // Handler for change name button click
+      // Get value of text input and update name to this value
+      var input = _this.parent.querySelector('input');
+
+      if (input) {
+        var name = input.value;
+      }
+
+      _this.model.set({
+        name: name
+      });
+    };
+
+    this.bindModel();
+  }
+
+  UserForm.prototype.bindModel = function () {
+    var _this = this; // Re-render if any changes/updates in the model occur
+
+
+    this.model.on('change', function () {
+      _this.render();
+    });
+  };
+
+  UserForm.prototype.eventsMap = function () {
+    // 'event:thing event occurs to': selector for element to bind event handler to
+    return {
+      'click:.set-age': this.onSetAgeClick,
+      'click:.set-name': this.onSetNameClick
+    };
+  };
+
+  UserForm.prototype.template = function () {
+    // Returns the HTML element to be appended
+    return "\n      <div>\n        <h1>User Form</h1>\n        <div>User name: " + this.model.get('name') + "</div>\n        <div>User age: " + this.model.get('age') + "</div>\n        <input />\n        <button class=\"set-name\">Change Name</button>\n        <button class=\"set-age\">Set Random Age</button>\n      </div>\n    ";
+  };
+
+  UserForm.prototype.bindEvents = function (fragment) {
+    // Loop through our events map object, and bind handlers for events
+    var eventsMap = this.eventsMap();
+
+    var _loop_1 = function _loop_1(eventKey) {
+      // e.g. break apart 'click' and 'button' from 'click:button'
+      var _a = eventKey.split(':'),
+          eventName = _a[0],
+          selector = _a[1];
+
+      fragment.querySelectorAll(selector).forEach(function (element) {
+        element.addEventListener(eventName, eventsMap[eventKey]);
+      });
+    };
+
+    for (var eventKey in eventsMap) {
+      _loop_1(eventKey);
+    }
+  };
+
+  UserForm.prototype.render = function () {
+    // Empty the parent element (necessary for re-renders)
+    this.parent.innerHTML = ''; // Turns string into an HTML element using templateElement
+
+    var templateElement = document.createElement('template');
+    templateElement.innerHTML = this.template(); // Bind event handlers to HTML
+
+    this.bindEvents(templateElement.content); // Appends the HTML created in template as a child of the parent element designated in the parent property
+
+    this.parent.append(templateElement.content);
+  };
+
+  return UserForm;
+}();
+
+exports.UserForm = UserForm;
+},{}],"src/models/Model.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2052,7 +2148,68 @@ function () {
 }();
 
 exports.Eventing = Eventing;
-},{}],"src/models/User.ts":[function(require,module,exports) {
+},{}],"src/models/Collection.ts":[function(require,module,exports) {
+"use strict";
+
+var __importDefault = this && this.__importDefault || function (mod) {
+  return mod && mod.__esModule ? mod : {
+    "default": mod
+  };
+};
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var Eventing_1 = require("./Eventing");
+
+var axios_1 = __importDefault(require("axios"));
+
+var Collection =
+/** @class */
+function () {
+  function Collection(rootUrl, // Deseralize is a fx that takes in data of type K and builds an object of type T
+  deserialize) {
+    this.rootUrl = rootUrl;
+    this.deserialize = deserialize; // T is the type of model (e.g. User) and K is the structure of JSON data we expect to get (e.g. UserProps interface)
+
+    this.models = [];
+    this.events = new Eventing_1.Eventing();
+  }
+
+  Object.defineProperty(Collection.prototype, "on", {
+    get: function get() {
+      return this.events.on;
+    },
+    enumerable: true,
+    configurable: true
+  });
+  Object.defineProperty(Collection.prototype, "trigger", {
+    get: function get() {
+      return this.events.trigger;
+    },
+    enumerable: true,
+    configurable: true
+  });
+
+  Collection.prototype.fetch = function () {
+    var _this = this;
+
+    axios_1.default.get(this.rootUrl).then(function (response) {
+      // For every object on the response, deserialize the data, build an object from it, add it to the Collection's models array
+      response.data.forEach(function (value) {
+        _this.models.push(_this.deserialize(value));
+      });
+
+      _this.trigger('change');
+    });
+  };
+
+  return Collection;
+}();
+
+exports.Collection = Collection;
+},{"./Eventing":"src/models/Eventing.ts","axios":"node_modules/axios/index.js"}],"src/models/User.ts":[function(require,module,exports) {
 "use strict";
 
 var __extends = this && this.__extends || function () {
@@ -2093,6 +2250,8 @@ var APISync_1 = require("./APISync");
 
 var Eventing_1 = require("./Eventing");
 
+var Collection_1 = require("./Collection");
+
 var rootUrl = 'http://localhost:3000/users';
 
 var User =
@@ -2108,87 +2267,46 @@ function (_super) {
     return new User(new Attributes_1.Attributes(attrs), new Eventing_1.Eventing(), new APISync_1.APISync(rootUrl));
   };
 
+  User.buildUserCollection = function () {
+    return new Collection_1.Collection(rootUrl, function (json) {
+      return User.buildUser(json);
+    });
+  };
+
+  User.prototype.setRandomAge = function () {
+    var age = Math.round(Math.random() * 100);
+    this.set({
+      age: age
+    });
+  };
+
   return User;
 }(Model_1.Model);
 
 exports.User = User;
-},{"./Model":"src/models/Model.ts","./Attributes":"src/models/Attributes.ts","./APISync":"src/models/APISync.ts","./Eventing":"src/models/Eventing.ts"}],"src/models/Collection.ts":[function(require,module,exports) {
-"use strict";
-
-var __importDefault = this && this.__importDefault || function (mod) {
-  return mod && mod.__esModule ? mod : {
-    "default": mod
-  };
-};
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var User_1 = require("./User");
-
-var Eventing_1 = require("./Eventing");
-
-var axios_1 = __importDefault(require("axios"));
-
-var Collection =
-/** @class */
-function () {
-  function Collection(rootUrl) {
-    this.rootUrl = rootUrl;
-    this.models = [];
-    this.events = new Eventing_1.Eventing();
-  }
-
-  Object.defineProperty(Collection.prototype, "on", {
-    get: function get() {
-      return this.events.on;
-    },
-    enumerable: true,
-    configurable: true
-  });
-  Object.defineProperty(Collection.prototype, "trigger", {
-    get: function get() {
-      return this.events.trigger;
-    },
-    enumerable: true,
-    configurable: true
-  });
-
-  Collection.prototype.fetch = function () {
-    var _this = this;
-
-    axios_1.default.get(this.rootUrl).then(function (response) {
-      // For every object on the response, turn it into a User and add it to the Collection's models array
-      response.data.forEach(function (value) {
-        var user = User_1.User.buildUser(value);
-
-        _this.models.push(user);
-      });
-
-      _this.trigger('change');
-    });
-  };
-
-  return Collection;
-}();
-
-exports.Collection = Collection;
-},{"./User":"src/models/User.ts","./Eventing":"src/models/Eventing.ts","axios":"node_modules/axios/index.js"}],"src/index.ts":[function(require,module,exports) {
+},{"./Model":"src/models/Model.ts","./Attributes":"src/models/Attributes.ts","./APISync":"src/models/APISync.ts","./Eventing":"src/models/Eventing.ts","./Collection":"src/models/Collection.ts"}],"src/index.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var Collection_1 = require("./models/Collection");
+var UserForm_1 = require("./views/UserForm");
 
-var collection = new Collection_1.Collection('http://localhost:3000/users');
-collection.on('change', function () {
-  console.log(collection);
+var User_1 = require("./models/User");
+
+var user = User_1.User.buildUser({
+  name: 'Sasa',
+  age: 20
 });
-collection.fetch();
-},{"./models/Collection":"src/models/Collection.ts"}],"../../../../../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+var root = document.getElementById('root');
+
+if (root) {
+  var userForm = new UserForm_1.UserForm(root, user);
+} else {
+  throw new Error('Root element not found');
+}
+},{"./views/UserForm":"src/views/UserForm.ts","./models/User":"src/models/User.ts"}],"../../../../../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -2216,7 +2334,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56997" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "49383" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
