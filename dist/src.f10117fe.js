@@ -117,45 +117,36 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"src/views/UserForm.ts":[function(require,module,exports) {
+})({"src/views/View.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
-});
+}); // Abstract, because it will only ever be used to extend (since it doesn't have access to the needed info directly to template and eventsMap)
+// T is the type of model, and K is the type of properties Model needs to receive (e.g. UserProps) since it is also generic
 
-var UserForm =
+var View =
 /** @class */
 function () {
-  function UserForm(parent, model) {
-    var _this = this;
-
+  function View(parent, model) {
     this.parent = parent;
     this.model = model;
-
-    this.onSetAgeClick = function () {
-      // Handler for random age button click
-      _this.model.setRandomAge();
-    };
-
-    this.onSetNameClick = function () {
-      // Handler for change name button click
-      // Get value of text input and update name to this value
-      var input = _this.parent.querySelector('input');
-
-      if (input) {
-        var name = input.value;
-      }
-
-      _this.model.set({
-        name: name
-      });
-    };
-
+    this.regions = {};
     this.bindModel();
   }
 
-  UserForm.prototype.bindModel = function () {
+  View.prototype.regionsMap = function () {
+    // Default implementation
+    // regionsMap in use will return the page regions and the selectors for each region's HTML element
+    return {};
+  };
+
+  View.prototype.eventsMap = function () {
+    // Default implementation of eventsMap for all views, so that you don't have to manually implement it if you don't want any events
+    return {};
+  };
+
+  View.prototype.bindModel = function () {
     var _this = this; // Re-render if any changes/updates in the model occur
 
 
@@ -164,20 +155,7 @@ function () {
     });
   };
 
-  UserForm.prototype.eventsMap = function () {
-    // 'event:thing event occurs to': selector for element to bind event handler to
-    return {
-      'click:.set-age': this.onSetAgeClick,
-      'click:.set-name': this.onSetNameClick
-    };
-  };
-
-  UserForm.prototype.template = function () {
-    // Returns the HTML element to be appended
-    return "\n      <div>\n        <h1>User Form</h1>\n        <div>User name: " + this.model.get('name') + "</div>\n        <div>User age: " + this.model.get('age') + "</div>\n        <input />\n        <button class=\"set-name\">Change Name</button>\n        <button class=\"set-age\">Set Random Age</button>\n      </div>\n    ";
-  };
-
-  UserForm.prototype.bindEvents = function (fragment) {
+  View.prototype.bindEvents = function (fragment) {
     // Loop through our events map object, and bind handlers for events
     var eventsMap = this.eventsMap();
 
@@ -197,23 +175,126 @@ function () {
     }
   };
 
-  UserForm.prototype.render = function () {
+  View.prototype.mapRegions = function (fragment) {
+    // Loop through regions/selectors and add the different regions to our regions property in the form (viewRegion: parentElementToNestIn)
+    var regionsMap = this.regionsMap();
+
+    for (var key in regionsMap) {
+      var selector = regionsMap[key];
+      var element = fragment.querySelector(selector);
+
+      if (element) {
+        this.regions[key] = element;
+      }
+    }
+  };
+
+  View.prototype.render = function () {
     // Empty the parent element (necessary for re-renders)
     this.parent.innerHTML = ''; // Turns string into an HTML element using templateElement
 
     var templateElement = document.createElement('template');
     templateElement.innerHTML = this.template(); // Bind event handlers to HTML
 
-    this.bindEvents(templateElement.content); // Appends the HTML created in template as a child of the parent element designated in the parent property
+    this.bindEvents(templateElement.content); // Map each page region to the corresponding selectors
+
+    this.mapRegions(templateElement.content); // Appends the HTML created in template as a child of the parent element designated in the parent property
 
     this.parent.append(templateElement.content);
   };
 
-  return UserForm;
+  return View;
 }();
 
+exports.View = View;
+},{}],"src/views/UserForm.ts":[function(require,module,exports) {
+"use strict";
+
+var __extends = this && this.__extends || function () {
+  var _extendStatics = function extendStatics(d, b) {
+    _extendStatics = Object.setPrototypeOf || {
+      __proto__: []
+    } instanceof Array && function (d, b) {
+      d.__proto__ = b;
+    } || function (d, b) {
+      for (var p in b) {
+        if (b.hasOwnProperty(p)) d[p] = b[p];
+      }
+    };
+
+    return _extendStatics(d, b);
+  };
+
+  return function (d, b) {
+    _extendStatics(d, b);
+
+    function __() {
+      this.constructor = d;
+    }
+
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+  };
+}();
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var View_1 = require("./View");
+
+var UserForm =
+/** @class */
+function (_super) {
+  __extends(UserForm, _super);
+
+  function UserForm() {
+    var _this = _super !== null && _super.apply(this, arguments) || this;
+
+    _this.onSaveClick = function () {
+      _this.model.save();
+    };
+
+    _this.onSetAgeClick = function () {
+      // Handler for random age button click
+      _this.model.setRandomAge();
+    };
+
+    _this.onSetNameClick = function () {
+      // Handler for change name button click
+      // Get value of text input and update name to this value
+      var input = _this.parent.querySelector('input');
+
+      if (input) {
+        var name = input.value;
+      }
+
+      _this.model.set({
+        name: name
+      });
+    };
+
+    return _this;
+  }
+
+  UserForm.prototype.eventsMap = function () {
+    // 'event:thing event occurs to': selector for element to bind event handler to
+    return {
+      'click:.set-age': this.onSetAgeClick,
+      'click:.set-name': this.onSetNameClick,
+      'click:.save-model': this.onSaveClick
+    };
+  };
+
+  UserForm.prototype.template = function () {
+    // Returns the HTML element to be appended
+    return "\n      <div>\n        <input placeholder=\"" + this.model.get('name') + "\"/>\n        <button class=\"set-name\">Change Name</button>\n        <button class=\"set-age\">Set Random Age</button>\n        <button class=\"save-model\">Save User</button>\n      </div>\n    ";
+  };
+
+  return UserForm;
+}(View_1.View);
+
 exports.UserForm = UserForm;
-},{}],"src/models/Model.ts":[function(require,module,exports) {
+},{"./View":"src/views/View.ts"}],"src/models/Model.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -230,7 +311,7 @@ function () {
 
     this.get = this.attributes.get;
     this.on = this.events.on;
-    this.trigget = this.events.trigger;
+    this.trigger = this.events.trigger;
   }
 
   Model.prototype.set = function (update) {
@@ -2300,12 +2381,15 @@ var user = User_1.User.buildUser({
   age: 20
 });
 var root = document.getElementById('root');
+var userForm;
 
 if (root) {
-  var userForm = new UserForm_1.UserForm(root, user);
+  userForm = new UserForm_1.UserForm(root, user);
 } else {
   throw new Error('Root element not found');
 }
+
+userForm.render();
 },{"./views/UserForm":"src/views/UserForm.ts","./models/User":"src/models/User.ts"}],"../../../../../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
@@ -2334,7 +2418,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "49383" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "57669" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

@@ -32,7 +32,7 @@ export class Model<T extends HasId> {
   // Directly refer to the methods so we can call them directly (e.g. user.get() instead of user.attributes.get())
   get = this.attributes.get;
   on = this.events.on;
-  trigget = this.events.trigger;
+  trigger = this.events.trigger;
 
   set(update: T): void {
     this.attributes.set(update);
