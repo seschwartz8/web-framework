@@ -58,6 +58,8 @@ export abstract class View<T extends Model<K>, K> {
     }
   }
 
+  onRender(): void {}
+
   render(): void {
     // Empty the parent element (necessary for re-renders)
     this.parent.innerHTML = '';
@@ -68,6 +70,8 @@ export abstract class View<T extends Model<K>, K> {
     this.bindEvents(templateElement.content);
     // Map each page region to the corresponding selectors
     this.mapRegions(templateElement.content);
+    // Nest views
+    this.onRender();
     // Appends the HTML created in template as a child of the parent element designated in the parent property
     this.parent.append(templateElement.content);
   }

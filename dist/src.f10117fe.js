@@ -117,7 +117,43 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"src/views/View.ts":[function(require,module,exports) {
+})({"src/views/CollectionView.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var CollectionView =
+/** @class */
+function () {
+  function CollectionView(parent, collection) {
+    this.parent = parent;
+    this.collection = collection;
+  }
+
+  CollectionView.prototype.render = function () {
+    // Iterate over every model in collection and render it to the screen
+    // clear out old HTML for re-renders
+    this.parent.innerHTML = '';
+    var templateElement = document.createElement('template');
+
+    for (var _i = 0, _a = this.collection.models; _i < _a.length; _i++) {
+      var model = _a[_i]; // Build up parent element and pass it to renderItem
+
+      var itemParent = document.createElement('div');
+      this.renderItem(model, itemParent);
+      templateElement.content.append(itemParent);
+    }
+
+    this.parent.append(templateElement.content);
+  };
+
+  return CollectionView;
+}();
+
+exports.CollectionView = CollectionView;
+},{}],"src/views/View.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -189,6 +225,8 @@ function () {
     }
   };
 
+  View.prototype.onRender = function () {};
+
   View.prototype.render = function () {
     // Empty the parent element (necessary for re-renders)
     this.parent.innerHTML = ''; // Turns string into an HTML element using templateElement
@@ -198,7 +236,9 @@ function () {
 
     this.bindEvents(templateElement.content); // Map each page region to the corresponding selectors
 
-    this.mapRegions(templateElement.content); // Appends the HTML created in template as a child of the parent element designated in the parent property
+    this.mapRegions(templateElement.content); // Nest views
+
+    this.onRender(); // Appends the HTML created in template as a child of the parent element designated in the parent property
 
     this.parent.append(templateElement.content);
   };
@@ -207,7 +247,7 @@ function () {
 }();
 
 exports.View = View;
-},{}],"src/views/UserForm.ts":[function(require,module,exports) {
+},{}],"src/views/UserShow.ts":[function(require,module,exports) {
 "use strict";
 
 var __extends = this && this.__extends || function () {
@@ -242,147 +282,120 @@ Object.defineProperty(exports, "__esModule", {
 
 var View_1 = require("./View");
 
-var UserForm =
+var UserShow =
 /** @class */
 function (_super) {
-  __extends(UserForm, _super);
+  __extends(UserShow, _super);
 
-  function UserForm() {
-    var _this = _super !== null && _super.apply(this, arguments) || this;
-
-    _this.onSaveClick = function () {
-      _this.model.save();
-    };
-
-    _this.onSetAgeClick = function () {
-      // Handler for random age button click
-      _this.model.setRandomAge();
-    };
-
-    _this.onSetNameClick = function () {
-      // Handler for change name button click
-      // Get value of text input and update name to this value
-      var input = _this.parent.querySelector('input');
-
-      if (input) {
-        var name = input.value;
-      }
-
-      _this.model.set({
-        name: name
-      });
-    };
-
-    return _this;
+  function UserShow() {
+    return _super !== null && _super.apply(this, arguments) || this;
   }
 
-  UserForm.prototype.eventsMap = function () {
-    // 'event:thing event occurs to': selector for element to bind event handler to
-    return {
-      'click:.set-age': this.onSetAgeClick,
-      'click:.set-name': this.onSetNameClick,
-      'click:.save-model': this.onSaveClick
-    };
+  UserShow.prototype.template = function () {
+    return "\n      <div>\n        <h1>User Detail</h1>\n        <div>User Name: " + this.model.get('name') + "</div>\n        <div>User Age: " + this.model.get('age') + "</div>\n      </div>\n    ";
   };
 
-  UserForm.prototype.template = function () {
-    // Returns the HTML element to be appended
-    return "\n      <div>\n        <input placeholder=\"" + this.model.get('name') + "\"/>\n        <button class=\"set-name\">Change Name</button>\n        <button class=\"set-age\">Set Random Age</button>\n        <button class=\"save-model\">Save User</button>\n      </div>\n    ";
-  };
-
-  return UserForm;
+  return UserShow;
 }(View_1.View);
 
-exports.UserForm = UserForm;
-},{"./View":"src/views/View.ts"}],"src/models/Model.ts":[function(require,module,exports) {
+exports.UserShow = UserShow;
+},{"./View":"src/views/View.ts"}],"src/views/UserList.ts":[function(require,module,exports) {
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
+var __extends = this && this.__extends || function () {
+  var _extendStatics = function extendStatics(d, b) {
+    _extendStatics = Object.setPrototypeOf || {
+      __proto__: []
+    } instanceof Array && function (d, b) {
+      d.__proto__ = b;
+    } || function (d, b) {
+      for (var p in b) {
+        if (b.hasOwnProperty(p)) d[p] = b[p];
+      }
+    };
 
-var Model =
-/** @class */
-function () {
-  function Model(attributes, events, sync) {
-    this.attributes = attributes;
-    this.events = events;
-    this.sync = sync; // Directly refer to the methods so we can call them directly (e.g. user.get() instead of user.attributes.get())
-
-    this.get = this.attributes.get;
-    this.on = this.events.on;
-    this.trigger = this.events.trigger;
-  }
-
-  Model.prototype.set = function (update) {
-    this.attributes.set(update);
-    this.events.trigger('change');
+    return _extendStatics(d, b);
   };
 
-  Model.prototype.fetch = function () {
-    var _this = this;
+  return function (d, b) {
+    _extendStatics(d, b);
 
-    var id = this.get('id');
-
-    if (typeof id !== 'number') {
-      throw new Error('Cannot fetch without an id');
+    function __() {
+      this.constructor = d;
     }
 
-    this.sync.fetch(id).then(function (response) {
-      _this.set(response.data);
-    });
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
   };
-
-  Model.prototype.save = function () {
-    var _this = this;
-
-    this.sync.save(this.attributes.getAll()).then(function (response) {
-      _this.trigger('save');
-    }).catch(function () {
-      _this.trigger('error');
-    });
-  };
-
-  return Model;
 }();
 
-exports.Model = Model;
-},{}],"src/models/Attributes.ts":[function(require,module,exports) {
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var CollectionView_1 = require("./CollectionView");
+
+var UserShow_1 = require("./UserShow");
+
+var UserList =
+/** @class */
+function (_super) {
+  __extends(UserList, _super);
+
+  function UserList() {
+    return _super !== null && _super.apply(this, arguments) || this;
+  }
+
+  UserList.prototype.renderItem = function (model, itemParent) {
+    // Use a specific view to render the model into the given parent element
+    new UserShow_1.UserShow(itemParent, model).render();
+  };
+
+  return UserList;
+}(CollectionView_1.CollectionView);
+
+exports.UserList = UserList;
+},{"./CollectionView":"src/views/CollectionView.ts","./UserShow":"src/views/UserShow.ts"}],"src/models/Eventing.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var Attributes =
+var Eventing =
 /** @class */
 function () {
-  function Attributes(data) {
+  function Eventing() {
     var _this = this;
 
-    this.data = data;
+    this.events = {};
 
-    this.get = function (key) {
-      // K can only ever be one of the different keys of T
-      // The return type is the value at the key K when K is looked up in interface T
-      // Using an arrow function to always keep "this" bound to the instance of attribute we create
-      return _this.data[key];
+    this.on = function (eventName, callback) {
+      // Add eventListener callbacks to events property
+      // Using an arrow function to always keep "this" bound to the instance of Eventing we create
+      var handlers = _this.events[eventName] || [];
+      handlers.push(callback);
+      _this.events[eventName] = handlers;
+    };
+
+    this.trigger = function (eventName) {
+      // Using an arrow function to always keep "this" bound to the instance of Eventing we create
+      var handlers = _this.events[eventName]; // If there are no handlers, return early
+
+      if (!handlers || handlers.length === 0) {
+        return;
+      } // For every handler in the array, call it
+
+
+      handlers.forEach(function (callback) {
+        callback();
+      });
     };
   }
 
-  Attributes.prototype.set = function (update) {
-    // Override current data values with update object
-    Object.assign(this.data, update);
-  };
-
-  Attributes.prototype.getAll = function () {
-    return this.data;
-  };
-
-  return Attributes;
+  return Eventing;
 }();
 
-exports.Attributes = Attributes;
+exports.Eventing = Eventing;
 },{}],"node_modules/axios/lib/helpers/bind.js":[function(require,module,exports) {
 'use strict';
 
@@ -2146,90 +2159,7 @@ module.exports.default = axios;
 
 },{"./utils":"node_modules/axios/lib/utils.js","./helpers/bind":"node_modules/axios/lib/helpers/bind.js","./core/Axios":"node_modules/axios/lib/core/Axios.js","./core/mergeConfig":"node_modules/axios/lib/core/mergeConfig.js","./defaults":"node_modules/axios/lib/defaults.js","./cancel/Cancel":"node_modules/axios/lib/cancel/Cancel.js","./cancel/CancelToken":"node_modules/axios/lib/cancel/CancelToken.js","./cancel/isCancel":"node_modules/axios/lib/cancel/isCancel.js","./helpers/spread":"node_modules/axios/lib/helpers/spread.js"}],"node_modules/axios/index.js":[function(require,module,exports) {
 module.exports = require('./lib/axios');
-},{"./lib/axios":"node_modules/axios/lib/axios.js"}],"src/models/APISync.ts":[function(require,module,exports) {
-"use strict";
-
-var __importDefault = this && this.__importDefault || function (mod) {
-  return mod && mod.__esModule ? mod : {
-    "default": mod
-  };
-};
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var axios_1 = __importDefault(require("axios"));
-
-var APISync =
-/** @class */
-function () {
-  function APISync(rootUrl) {
-    this.rootUrl = rootUrl;
-  }
-
-  APISync.prototype.fetch = function (id) {
-    return axios_1.default.get(this.rootUrl + "/" + id);
-  };
-
-  APISync.prototype.save = function (data) {
-    // User that already has ID, already has a server-side representation and is just being updated with PUT request. New user will need a POST request.
-    var id = data.id;
-
-    if (id) {
-      return axios_1.default.put(this.rootUrl + "/" + id, data);
-    } else {
-      return axios_1.default.post("" + this.rootUrl, data);
-    }
-  };
-
-  return APISync;
-}();
-
-exports.APISync = APISync;
-},{"axios":"node_modules/axios/index.js"}],"src/models/Eventing.ts":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var Eventing =
-/** @class */
-function () {
-  function Eventing() {
-    var _this = this;
-
-    this.events = {};
-
-    this.on = function (eventName, callback) {
-      // Add eventListener callbacks to events property
-      // Using an arrow function to always keep "this" bound to the instance of Eventing we create
-      var handlers = _this.events[eventName] || [];
-      handlers.push(callback);
-      _this.events[eventName] = handlers;
-    };
-
-    this.trigger = function (eventName) {
-      // Using an arrow function to always keep "this" bound to the instance of Eventing we create
-      var handlers = _this.events[eventName]; // If there are no handlers, return early
-
-      if (!handlers || handlers.length === 0) {
-        return;
-      } // For every handler in the array, call it
-
-
-      handlers.forEach(function (callback) {
-        callback();
-      });
-    };
-  }
-
-  return Eventing;
-}();
-
-exports.Eventing = Eventing;
-},{}],"src/models/Collection.ts":[function(require,module,exports) {
+},{"./lib/axios":"node_modules/axios/lib/axios.js"}],"src/models/Collection.ts":[function(require,module,exports) {
 "use strict";
 
 var __importDefault = this && this.__importDefault || function (mod) {
@@ -2290,7 +2220,137 @@ function () {
 }();
 
 exports.Collection = Collection;
-},{"./Eventing":"src/models/Eventing.ts","axios":"node_modules/axios/index.js"}],"src/models/User.ts":[function(require,module,exports) {
+},{"./Eventing":"src/models/Eventing.ts","axios":"node_modules/axios/index.js"}],"src/models/Model.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var Model =
+/** @class */
+function () {
+  function Model(attributes, events, sync) {
+    this.attributes = attributes;
+    this.events = events;
+    this.sync = sync; // Directly refer to the methods so we can call them directly (e.g. user.get() instead of user.attributes.get())
+
+    this.get = this.attributes.get;
+    this.on = this.events.on;
+    this.trigger = this.events.trigger;
+  }
+
+  Model.prototype.set = function (update) {
+    this.attributes.set(update);
+    this.events.trigger('change');
+  };
+
+  Model.prototype.fetch = function () {
+    var _this = this;
+
+    var id = this.get('id');
+
+    if (typeof id !== 'number') {
+      throw new Error('Cannot fetch without an id');
+    }
+
+    this.sync.fetch(id).then(function (response) {
+      _this.set(response.data);
+    });
+  };
+
+  Model.prototype.save = function () {
+    var _this = this;
+
+    this.sync.save(this.attributes.getAll()).then(function (response) {
+      _this.trigger('save');
+    }).catch(function () {
+      _this.trigger('error');
+    });
+  };
+
+  return Model;
+}();
+
+exports.Model = Model;
+},{}],"src/models/Attributes.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var Attributes =
+/** @class */
+function () {
+  function Attributes(data) {
+    var _this = this;
+
+    this.data = data;
+
+    this.get = function (key) {
+      // K can only ever be one of the different keys of T
+      // The return type is the value at the key K when K is looked up in interface T
+      // Using an arrow function to always keep "this" bound to the instance of attribute we create
+      return _this.data[key];
+    };
+  }
+
+  Attributes.prototype.set = function (update) {
+    // Override current data values with update object
+    Object.assign(this.data, update);
+  };
+
+  Attributes.prototype.getAll = function () {
+    return this.data;
+  };
+
+  return Attributes;
+}();
+
+exports.Attributes = Attributes;
+},{}],"src/models/APISync.ts":[function(require,module,exports) {
+"use strict";
+
+var __importDefault = this && this.__importDefault || function (mod) {
+  return mod && mod.__esModule ? mod : {
+    "default": mod
+  };
+};
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var axios_1 = __importDefault(require("axios"));
+
+var APISync =
+/** @class */
+function () {
+  function APISync(rootUrl) {
+    this.rootUrl = rootUrl;
+  }
+
+  APISync.prototype.fetch = function (id) {
+    return axios_1.default.get(this.rootUrl + "/" + id);
+  };
+
+  APISync.prototype.save = function (data) {
+    // User that already has ID, already has a server-side representation and is just being updated with PUT request. New user will need a POST request.
+    var id = data.id;
+
+    if (id) {
+      return axios_1.default.put(this.rootUrl + "/" + id, data);
+    } else {
+      return axios_1.default.post("" + this.rootUrl, data);
+    }
+  };
+
+  return APISync;
+}();
+
+exports.APISync = APISync;
+},{"axios":"node_modules/axios/index.js"}],"src/models/User.ts":[function(require,module,exports) {
 "use strict";
 
 var __extends = this && this.__extends || function () {
@@ -2372,25 +2432,27 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var UserForm_1 = require("./views/UserForm");
+var UserList_1 = require("./views/UserList");
 
-var User_1 = require("./models/User");
+var Collection_1 = require("./models/Collection");
 
-var user = User_1.User.buildUser({
-  name: 'Sasa',
-  age: 20
-});
-var root = document.getElementById('root');
-var userForm;
+var User_1 = require("./models/User"); // Make new collection of users
 
-if (root) {
-  userForm = new UserForm_1.UserForm(root, user);
-} else {
-  throw new Error('Root element not found');
-}
 
-userForm.render();
-},{"./views/UserForm":"src/views/UserForm.ts","./models/User":"src/models/User.ts"}],"../../../../../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+var users = new Collection_1.Collection('http://localhost:3000/users', function (json) {
+  return User_1.User.buildUser(json);
+}); // Event handler to watch for change event
+
+users.on('change', function () {
+  var root = document.getElementById('root');
+
+  if (root) {
+    new UserList_1.UserList(root, users).render();
+  }
+}); // Fetch the different users from json server endpoint (see the db.json file to see the database contents)
+
+users.fetch();
+},{"./views/UserList":"src/views/UserList.ts","./models/Collection":"src/models/Collection.ts","./models/User":"src/models/User.ts"}],"../../../../../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;

@@ -1,13 +1,23 @@
-import { UserForm } from './views/UserForm';
-import { User } from './models/User';
+import { UserList } from './views/UserList';
+import { Collection } from './models/Collection';
+import { UserProps, User } from './models/User';
 
-const user = User.buildUser({ name: 'Sasa', age: 20 });
-const root = document.getElementById('root');
-let userForm;
-if (root) {
-  userForm = new UserForm(root, user);
-} else {
-  throw new Error('Root element not found');
-}
+// Make new collection of users
+const users = new Collection(
+  'http://localhost:3000/users',
+  (json: UserProps) => {
+    return User.buildUser(json);
+  }
+);
 
-userForm.render();
+// Event handler to watch for change event
+users.on('change', () => {
+  const root = document.getElementById('root');
+
+  if (root) {
+    new UserList(root, users).render();
+  }
+});
+
+// Fetch the different users from json server endpoint (see the db.json file to see the database contents)
+users.fetch();
